@@ -12,7 +12,7 @@ import { streamChat, estimateMessagesTokens, LLMOptions } from '@/lib/llm/client
 import { getSystemPrompt, WorkflowContext } from '@/lib/llm/tools';
 import { parseToolCallToOperation, executeOperation } from '@/lib/editor/operations';
 import { retrieveContext, buildMemoryContext, autoSaveSession } from '@/lib/rag';
-import { ChatMessage, LLMMessage } from '@/types';
+import { ChatMessage, LLMMessage, isCloudProvider } from '@/types';
 import { EditorView } from '@codemirror/view';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -91,14 +91,15 @@ export function Chat({ editorView }: ChatProps) {
     updateToolCallResult,
     setIsStreaming,
   } = useChatStore();
-  const { 
-    temperature, 
-    topP, 
-    topK, 
-    repeatPenalty, 
+  const {
+    temperature,
+    topP,
+    topK,
+    repeatPenalty,
     contextLength,
     setContextUsed,
     serviceURLs,
+    getAPIKey,
   } = useSettingsStore();
   
   const { getWorkflow, getProgress } = useWorkflowStore();
@@ -251,6 +252,20 @@ Use this context to inform your response when relevant. Cite sources when refere
       contextLength,
     };
 
+    // Cloud providers require an API key entered in Settings; local
+    // providers (Ollama/LM Studio) don't use one.
+    const apiKey = isCloudProvider(provider) ? getAPIKey(provider) : undefined;
+
+    if (isCloudProvider(provider) && !apiKey) {
+      updateMessage(assistantId, {
+        status: 'error',
+        content: `Error: No API key configured for ${provider}. Add one in Settings.`,
+      });
+      setIsStreaming(false);
+      showToast(`No API key configured for ${provider}`, 'error');
+      return;
+    }
+
     try {
       await streamChat(
         provider,
@@ -320,7 +335,8 @@ Use this context to inform your response when relevant. Cite sources when refere
           },
         },
         true, // Use tools
-        llmOptions
+        llmOptions,
+        apiKey
       );
     } catch (error) {
       updateMessage(assistantId, {
@@ -351,6 +367,7 @@ Use this context to inform your response when relevant. Cite sources when refere
     repeatPenalty,
     contextLength,
     setContextUsed,
+    getAPIKey,
     ragSettings,
     sessionMemorySettings,
     serviceURLs,
