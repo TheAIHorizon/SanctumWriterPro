@@ -92,19 +92,21 @@ export function Header() {
   const checkProviderStatus = useCallback(async () => {
     setProviderStatus('checking');
     try {
-      // For cloud providers, include API key
-      let url = `/api/models?provider=${provider}`;
+      // For cloud providers, send the API key in the POST body
+      // (never in the query string, where it would land in server logs)
+      let apiKey: string | undefined;
       if (isCloudProvider(provider as LLMProviderType)) {
         const providerConfig = CLOUD_PROVIDERS.find(p => p.id === provider);
         if (providerConfig) {
-          const apiKey = apiKeys[providerConfig.apiKeyName];
-          if (apiKey) {
-            url += `&apiKey=${encodeURIComponent(apiKey)}`;
-          }
+          apiKey = apiKeys[providerConfig.apiKeyName] || undefined;
         }
       }
-      
-      const response = await fetch(url);
+
+      const response = await fetch('/api/models', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ provider, apiKey }),
+      });
       const data = await response.json();
       
       if (data.available) {

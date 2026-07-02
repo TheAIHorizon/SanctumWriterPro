@@ -2,6 +2,17 @@
 // Export to PDF and DOCX formats
 
 import { marked } from 'marked';
+import DOMPurify from 'dompurify';
+
+// Escape text for safe interpolation into HTML (titles, authors, TOC entries)
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
 
 export interface ExportOptions {
   title: string;
@@ -33,7 +44,7 @@ function generateTableOfContents(markdown: string): string {
   
   for (const item of tocItems) {
     const indent = '  '.repeat(item.level - 1);
-    tocHtml += `${indent}<li style="margin-left: ${(item.level - 1) * 1.5}em"><a href="#${item.slug}">${item.text}</a></li>\n`;
+    tocHtml += `${indent}<li style="margin-left: ${(item.level - 1) * 1.5}em"><a href="#${item.slug}">${escapeHtml(item.text)}</a></li>\n`;
   }
   
   tocHtml += '</ul></div><hr>';
@@ -48,7 +59,9 @@ export function markdownToHtml(markdown: string): string {
     gfm: true,
   });
   
-  return marked.parse(markdown) as string;
+  const rawHtml = marked.parse(markdown) as string;
+  // Sanitize rendered HTML before it is written to a document (XSS hardening)
+  return DOMPurify.sanitize(rawHtml);
 }
 
 // Export as HTML (basic export, works everywhere)
@@ -60,7 +73,7 @@ export function exportAsHtml(content: string, options: ExportOptions): void {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${options.title}</title>
+  <title>${escapeHtml(options.title)}</title>
   <style>
     body {
       font-family: 'Georgia', 'Times New Roman', serif;
@@ -123,8 +136,8 @@ export function exportAsHtml(content: string, options: ExportOptions): void {
   </style>
 </head>
 <body>
-  ${options.includeTitle !== false ? `<h1>${options.title}</h1>` : ''}
-  ${options.author ? `<p><em>By ${options.author}</em></p>` : ''}
+  ${options.includeTitle !== false ? `<h1>${escapeHtml(options.title)}</h1>` : ''}
+  ${options.author ? `<p><em>By ${escapeHtml(options.author)}</em></p>` : ''}
   ${html}
 </body>
 </html>`;
@@ -146,7 +159,7 @@ export function exportAsPdf(content: string, options: ExportOptions): void {
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>${options.title}</title>
+  <title>${escapeHtml(options.title)}</title>
   <style>
     @page {
       size: ${options.pageSize || 'A4'};
@@ -218,8 +231,8 @@ export function exportAsPdf(content: string, options: ExportOptions): void {
 <body>
   ${options.includeTitle !== false ? `
   <div class="title-page">
-    <h1>${options.title}</h1>
-    ${options.author ? `<p><em>By ${options.author}</em></p>` : ''}
+    <h1>${escapeHtml(options.title)}</h1>
+    ${options.author ? `<p><em>By ${escapeHtml(options.author)}</em></p>` : ''}
   </div>
   ` : ''}
   ${toc}
@@ -267,7 +280,7 @@ export async function exportAsDocx(content: string, options: ExportOptions): Pro
       xmlns="http://www.w3.org/TR/REC-html40">
 <head>
   <meta charset="UTF-8">
-  <title>${options.title}</title>
+  <title>${escapeHtml(options.title)}</title>
   <!--[if gte mso 9]>
   <xml>
     <w:WordDocument>
@@ -293,8 +306,8 @@ export async function exportAsDocx(content: string, options: ExportOptions): Pro
   </style>
 </head>
 <body>
-  ${options.includeTitle !== false ? `<h1>${options.title}</h1>` : ''}
-  ${options.author ? `<p><em>By ${options.author}</em></p>` : ''}
+  ${options.includeTitle !== false ? `<h1>${escapeHtml(options.title)}</h1>` : ''}
+  ${options.author ? `<p><em>By ${escapeHtml(options.author)}</em></p>` : ''}
   ${html}
 </body>
 </html>`;

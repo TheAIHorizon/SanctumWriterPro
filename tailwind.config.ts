@@ -23,8 +23,8 @@ const config: Config = {
         'selection': 'rgba(20, 184, 166, 0.25)',
       },
       fontFamily: {
-        sans: ['Inter', 'system-ui', 'sans-serif'],
-        mono: ['JetBrains Mono', 'Fira Code', 'monospace'],
+        sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'system-ui', 'sans-serif'],
+        mono: ['JetBrains Mono', 'ui-monospace', 'SF Mono', 'Menlo', 'Consolas', 'monospace'],
       },
       animation: {
         'fade-in': 'fadeIn 0.2s ease-out',

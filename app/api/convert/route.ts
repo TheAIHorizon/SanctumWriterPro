@@ -1,9 +1,31 @@
 import { NextResponse } from 'next/server';
 import { spawn } from 'child_process';
 import { writeFile, unlink, mkdir } from 'fs/promises';
-import { join } from 'path';
+import { join, isAbsolute, resolve, sep } from 'path';
 import { tmpdir } from 'os';
 import { randomUUID } from 'crypto';
+
+const DEFAULT_WORKSPACE_PATH = process.env.WORKSPACE_PATH || './documents';
+
+// The vault root is the only directory tree conversion output may be written to.
+function getVaultRoot(): string {
+  return resolve(process.cwd(), DEFAULT_WORKSPACE_PATH);
+}
+
+// Resolve a caller-supplied output directory, returning null if it escapes the vault.
+function resolveOutputDir(requested: string): string | null {
+  if (requested.split(/[\\/]+/).some((segment) => segment === '..')) {
+    return null;
+  }
+  const vaultRoot = getVaultRoot();
+  const resolved = isAbsolute(requested)
+    ? resolve(requested)
+    : resolve(process.cwd(), requested);
+  if (resolved !== vaultRoot && !resolved.startsWith(vaultRoot + sep)) {
+    return null;
+  }
+  return resolved;
+}
 
 interface ConversionResult {
   success: boolean;
@@ -102,11 +124,32 @@ export async function POST(request: Request) {
     const buffer = Buffer.from(await file.arrayBuffer());
     await writeFile(tempInputPath, buffer);
     
-    // Determine output path
+    // Determine output path (confined to the workspace vault)
     let fullOutputPath: string | undefined;
     if (outputPath) {
+      const outputDir = resolveOutputDir(outputPath);
+      if (!outputDir) {
+        return NextResponse.json(
+          { success: false, error: 'Output path is outside the workspace vault' },
+          { status: 403 }
+        );
+      }
+
       const outputFilename = filename || `${file.name.replace(/\.[^/.]+$/, '')}.md`;
-      fullOutputPath = join(outputPath, outputFilename);
+      // The output file name must be a plain name, not a path.
+      if (
+        outputFilename.includes('/') ||
+        outputFilename.includes('\\') ||
+        outputFilename === '..' ||
+        outputFilename === '.'
+      ) {
+        return NextResponse.json(
+          { success: false, error: 'Invalid output file name' },
+          { status: 400 }
+        );
+      }
+
+      fullOutputPath = join(outputDir, outputFilename);
     }
     
     // Run conversion

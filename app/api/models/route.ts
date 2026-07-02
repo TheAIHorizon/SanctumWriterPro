@@ -33,10 +33,20 @@ const XAI_MODELS = [
   { id: 'grok-2', name: 'Grok 2', contextLength: 131072 },
 ];
 
-export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const provider = searchParams.get('provider') || 'ollama';
-  const apiKey = searchParams.get('apiKey') || '';
+// POST so the API key travels in the request body, never in the query
+// string (query strings are captured by server/proxy logs).
+export async function POST(request: Request) {
+  let body: { provider?: string; apiKey?: string } = {};
+  try {
+    body = await request.json();
+  } catch {
+    // Fall through with defaults when no/invalid JSON body is sent
+  }
+  const provider = body.provider || 'ollama';
+  const apiKey =
+    request.headers.get('authorization')?.replace(/^Bearer\s+/i, '') ||
+    body.apiKey ||
+    '';
 
   try {
     // Local providers
