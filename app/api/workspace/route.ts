@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
 import { readdir, stat } from 'fs/promises';
-import { join, dirname, basename } from 'path';
+import { join, dirname, basename, isAbsolute, resolve, sep } from 'path';
 import { existsSync } from 'fs';
-import { homedir } from 'os';
+
+const DEFAULT_WORKSPACE_PATH = process.env.WORKSPACE_PATH || './documents';
 
 interface DirectoryEntry {
   name: string;
@@ -10,11 +11,44 @@ interface DirectoryEntry {
   type: 'file' | 'directory';
 }
 
-// Get list of directories for folder browser
+// The vault root is the only directory tree the workspace API may expose.
+function getVaultRoot(): string {
+  return resolve(process.cwd(), DEFAULT_WORKSPACE_PATH);
+}
+
+function isWithin(root: string, target: string): boolean {
+  return target === root || target.startsWith(root + sep);
+}
+
+// Resolve a requested path and confirm it stays inside the vault.
+// Returns null when the path is invalid or escapes the vault.
+function resolveVaultPath(requested: string): string | null {
+  if (requested.split(/[\\/]+/).some((segment) => segment === '..')) {
+    return null;
+  }
+  const resolved = isAbsolute(requested)
+    ? resolve(requested)
+    : resolve(process.cwd(), requested);
+  if (!isWithin(getVaultRoot(), resolved)) {
+    return null;
+  }
+  return resolved;
+}
+
+// Get list of directories for folder browser (confined to the vault root)
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  const path = searchParams.get('path') || homedir();
-  
+  const vaultRoot = getVaultRoot();
+  const requested = searchParams.get('path');
+  const path = requested ? resolveVaultPath(requested) : vaultRoot;
+
+  if (!path) {
+    return NextResponse.json(
+      { error: 'Path is outside the workspace vault' },
+      { status: 403 }
+    );
+  }
+
   try {
     // Validate path exists
     if (!existsSync(path)) {
@@ -23,7 +57,7 @@ export async function GET(request: Request) {
         { status: 404 }
       );
     }
-    
+
     const stats = await stat(path);
     if (!stats.isDirectory()) {
       return NextResponse.json(
@@ -31,18 +65,18 @@ export async function GET(request: Request) {
         { status: 400 }
       );
     }
-    
+
     const items = await readdir(path);
     const entries: DirectoryEntry[] = [];
-    
+
     for (const item of items) {
       // Skip hidden files/folders on Windows and Unix
       if (item.startsWith('.') || item.startsWith('$')) continue;
-      
+
       try {
         const fullPath = join(path, item);
         const itemStats = await stat(fullPath);
-        
+
         // Only include directories
         if (itemStats.isDirectory()) {
           entries.push({
@@ -56,15 +90,17 @@ export async function GET(request: Request) {
         continue;
       }
     }
-    
+
     // Sort alphabetically
     entries.sort((a, b) => a.name.localeCompare(b.name));
-    
+
+    const canGoUp = path !== vaultRoot; // Never browse above the vault root
+
     return NextResponse.json({
       currentPath: path,
-      parentPath: dirname(path),
+      parentPath: canGoUp ? dirname(path) : path,
       entries,
-      canGoUp: path !== dirname(path), // Can't go up from root
+      canGoUp,
     });
   } catch (error) {
     console.error('Error browsing directory:', error);
@@ -75,29 +111,37 @@ export async function GET(request: Request) {
   }
 }
 
-// Validate a workspace path
+// Validate a workspace path (must stay inside the vault)
 export async function POST(request: Request) {
   try {
     const { path } = await request.json();
-    
+
     if (!path) {
       return NextResponse.json(
         { error: 'Path is required' },
         { status: 400 }
       );
     }
-    
+
+    const resolvedPath = resolveVaultPath(path);
+    if (!resolvedPath) {
+      return NextResponse.json(
+        { valid: false, error: 'Path is outside the workspace vault', path },
+        { status: 403 }
+      );
+    }
+
     // Check if path exists
-    if (!existsSync(path)) {
+    if (!existsSync(resolvedPath)) {
       return NextResponse.json({
         valid: false,
         error: 'Path does not exist',
         path,
       });
     }
-    
+
     // Check if it's a directory
-    const stats = await stat(path);
+    const stats = await stat(resolvedPath);
     if (!stats.isDirectory()) {
       return NextResponse.json({
         valid: false,
@@ -105,17 +149,17 @@ export async function POST(request: Request) {
         path,
       });
     }
-    
+
     // Count markdown files
     let markdownCount = 0;
     const countMarkdown = async (dir: string, depth = 0) => {
       if (depth > 3) return; // Don't go too deep
-      
+
       try {
         const items = await readdir(dir);
         for (const item of items) {
           if (item.startsWith('.') || item === 'node_modules') continue;
-          
+
           const fullPath = join(dir, item);
           try {
             const itemStats = await stat(fullPath);
@@ -132,13 +176,13 @@ export async function POST(request: Request) {
         // Ignore errors
       }
     };
-    
-    await countMarkdown(path);
-    
+
+    await countMarkdown(resolvedPath);
+
     return NextResponse.json({
       valid: true,
-      path,
-      name: basename(path),
+      path: resolvedPath,
+      name: basename(resolvedPath),
       markdownFiles: markdownCount,
     });
   } catch (error) {
@@ -149,4 +193,3 @@ export async function POST(request: Request) {
     );
   }
 }
-
