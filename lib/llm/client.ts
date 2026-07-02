@@ -13,12 +13,23 @@ const CLOUD_URLS = {
   xai: 'https://api.x.ai/v1',
 };
 
+// Default cap on generated output tokens. This is intentionally decoupled
+// from contextLength: contextLength describes how much input the model can
+// see (used for num_ctx / input budgeting), while max_tokens caps how much
+// the model is allowed to *generate*. Conflating the two breaks providers
+// with very large context windows (e.g. Anthropic models with 200K context
+// would otherwise be asked to generate 200K output tokens, which the API
+// rejects).
+const DEFAULT_MAX_OUTPUT_TOKENS = 4096;
+
 export interface LLMOptions {
   temperature?: number;
   topP?: number;
   topK?: number;
   repeatPenalty?: number;
   contextLength?: number;
+  /** Max tokens the model is allowed to generate in its response. */
+  maxTokens?: number;
 }
 
 // Rough token estimation (4 chars per token on average)
@@ -202,7 +213,7 @@ async function streamLMStudioChat(
     stream: true,
     temperature: options.temperature ?? 0.7,
     top_p: options.topP ?? 0.9,
-    max_tokens: options.contextLength ?? 4096,
+    max_tokens: options.maxTokens ?? DEFAULT_MAX_OUTPUT_TOKENS,
     frequency_penalty: (options.repeatPenalty ?? 1.1) - 1, // Convert to OpenAI format
   };
 
@@ -339,9 +350,9 @@ async function streamCloudChat(
     stream: true,
     temperature: options.temperature ?? 0.7,
     top_p: options.topP ?? 0.9,
-    max_tokens: options.contextLength ?? 4096,
+    max_tokens: options.maxTokens ?? DEFAULT_MAX_OUTPUT_TOKENS,
   };
-  
+
   if (useTools) {
     body.tools = formatToolsForOpenAI(documentTools);
     body.tool_choice = 'auto';
@@ -442,7 +453,7 @@ async function streamAnthropicChat(
   const body: Record<string, unknown> = {
     model,
     messages: chatMessages,
-    max_tokens: options.contextLength ?? 4096,
+    max_tokens: options.maxTokens ?? DEFAULT_MAX_OUTPUT_TOKENS,
     stream: true,
   };
   
@@ -527,7 +538,7 @@ async function streamGoogleChat(
       temperature: options.temperature ?? 0.7,
       topP: options.topP ?? 0.9,
       topK: options.topK ?? 40,
-      maxOutputTokens: options.contextLength ?? 4096,
+      maxOutputTokens: options.maxTokens ?? DEFAULT_MAX_OUTPUT_TOKENS,
     },
   };
   
