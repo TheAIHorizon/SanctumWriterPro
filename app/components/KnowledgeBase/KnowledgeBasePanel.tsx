@@ -42,7 +42,7 @@ const COLLECTION_LABELS: Record<CollectionName, { label: string; icon: React.Rea
 
 export function KnowledgeBasePanel() {
   const [activeTab, setActiveTab] = useState<'documents' | 'settings'>('documents');
-  const [expandedCollections, setExpandedCollections] = useState<Set<CollectionName>>(new Set(['references']));
+  const [expandedCollections, setExpandedCollections] = useState<Set<CollectionName>>(new Set<CollectionName>(['references']));
   const [isAddingDocument, setIsAddingDocument] = useState(false);
   const [newDocContent, setNewDocContent] = useState('');
   const [newDocName, setNewDocName] = useState('');
