@@ -25,7 +25,10 @@ export async function detectGPU(): Promise<GPUInfo> {
   // Try WebGPU first (more accurate)
   if ('gpu' in navigator) {
     try {
-      const gpu = navigator.gpu as GPU;
+      // WebGPU types (`GPU`) aren't in lib.dom.d.ts without the optional
+      // @webgpu/types package; `any` is used here for this feature-detected,
+      // best-effort browser API only.
+      const gpu = (navigator as any).gpu;
       const adapter = await gpu.requestAdapter();
       if (adapter) {
         result.isWebGPU = true;

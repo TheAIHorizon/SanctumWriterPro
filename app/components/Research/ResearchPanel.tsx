@@ -355,7 +355,7 @@ export function ResearchPanel() {
                   Start Perplexica (port 3000) or SearXNG (port 4000)
                 </p>
                 <button
-                  onClick={checkEngines}
+                  onClick={checkEnginesWithURLs}
                   className="mt-2 text-xs text-accent hover:underline flex items-center gap-1"
                 >
                   <RefreshCw className="w-3 h-3" />

@@ -55,7 +55,7 @@ export function WorkflowPanel() {
   } = useWorkflowStore();
   
   const { currentDocument } = useAppStore();
-  const [expandedStages, setExpandedStages] = useState<Set<WorkflowStage>>(new Set(['setup']));
+  const [expandedStages, setExpandedStages] = useState<Set<WorkflowStage>>(new Set<WorkflowStage>(['setup']));
   const [showNotes, setShowNotes] = useState(false);
   
   const documentPath = currentDocument?.path || '';

@@ -19,16 +19,16 @@ export interface SearchResult {
   relevanceScore?: number;
 }
 
+export type SearchEngine = 'perplexica' | 'searxng' | 'both';
+
 export interface SearchResponse {
   query: string;
   results: SearchResult[];
   totalResults: number;
-  searchEngine: 'perplexica' | 'searxng';
+  searchEngine: SearchEngine;
   aiSummary?: string; // Perplexica can provide AI summaries
   error?: string;
 }
-
-export type SearchEngine = 'perplexica' | 'searxng' | 'both';
 
 export interface ServiceURLs {
   perplexica?: string;
