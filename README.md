@@ -4,7 +4,7 @@
 
 A feature-rich markdown editor with access to the world's best AI models - GPT-4, Claude, Gemini, Grok, and 100+ more. All the power of SanctumWriter, supercharged with cloud AI.
 
-![SanctumWriter Pro](https://img.shields.io/badge/Status-Beta-blue) ![License](https://img.shields.io/badge/License-Pending-yellow) ![Pro](https://img.shields.io/badge/Version-Pro-purple)
+![SanctumWriter Pro](https://img.shields.io/badge/Status-Beta-blue) ![License](https://img.shields.io/badge/License-Polyform%20Noncommercial%201.0.0-orange) ![Pro](https://img.shields.io/badge/Version-Pro-purple)
 
 ## 🆚 SanctumWriter vs Pro
 
@@ -102,9 +102,8 @@ Click the provider dropdown in the header → Select a cloud provider → Choose
 
 ## 💰 Pricing
 
-SanctumWriter Pro itself has no license fee to use from this repository (see
-[License](#-license) — licensing terms are still pending). You only pay for
-the cloud API usage:
+SanctumWriter Pro is free for noncommercial use under the Polyform Noncommercial
+License (see [License](#-license)). You only pay for the cloud API usage:
 
 | Provider | Approximate Cost |
 |----------|------------------|
@@ -188,14 +187,13 @@ Local providers (Ollama, LM Studio) still work! They're in the "Local (Free)" se
 
 ## 📄 License
 
-**Licensing is pending — there is currently no LICENSE file in this repository.**
-Do not treat this project as MIT-licensed; that was a documentation error and
-has been corrected here. The upstream [SanctumWriter](https://github.com/TheAIHorizon/SanctumWriter)
-project ships under the [Polyform Noncommercial License 1.0.0](https://polyformproject.org/licenses/noncommercial/1.0.0)
-(free for personal/educational/research use, commercial use requires contacting
-the repository owner). Until a license is chosen for SanctumWriter Pro
-specifically, no license should be assumed and no license terms should be
-relied upon for this repository.
+**Polyform Noncommercial License 1.0.0** — see [LICENSE](LICENSE) for the full text. Free for
+personal, educational, research, and other noncommercial use; commercial use requires a separate
+license from the copyright holder. This matches the upstream
+[SanctumWriter](https://github.com/TheAIHorizon/SanctumWriter) project and is the standard license
+across the Sanctum suite. It is a **source-available** license, not an OSI "open source" license:
+you can read and audit the code, but reuse is limited to noncommercial purposes. (An earlier README
+claimed "MIT"; that was a documentation error.)
 
 ---
 
